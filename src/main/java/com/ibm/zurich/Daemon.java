@@ -4,6 +4,11 @@ import java.math.BigInteger;
 import java.util.Base64;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import com.ibm.zurich.Authenticator;
 import com.ibm.zurich.Authenticator.EcDaaSignature;
@@ -30,6 +35,10 @@ public class Daemon {
 
         private Verifier ver;
 
+        private RandomAccessFile pipe;
+
+        private Path tmp_fifoPath = Paths.get("/tmp/xaptum_ecdaa_daemon_pipe");
+
         private String tmp_ipk_string = "{\"EcDaaTrustAnchor\":{\"X\":\"BLbzZnMBEYztz-9mUZVx0D0x5gZUGw_RvvQhuF5LUimp7p8ilTcZaJz-h1qaOauKkKmjS5mHQMHmi94YPjCQgYeq9az574oUYBMsohSnh9PujGDNS3hTBXX4nFUIZuxUm9u9sH2dIKzNqmPtCPJFMErOFJMtd7KuprFKeN2PPKL9\",\"Y\":\"BNb73A7VTTGGaSqejxaCz4PW7bsdf2cHoyEYrlvtwqD5WXs2niH1BKQay_vAGuQyQP6uUqMDU0VR07_91ZdTssf23TK4IlmX3CHiUZOdYV11hhi6TODXk6uA2jNd1bg004QPkxS4gpb6R_fcj39cF18rLUu4cr5lDNk7xjbXhC_e\",\"c\":\"i3pfhffzh-xI_hdTi2JSLoqx9BuNekce8rRbFp3DO44=\",\"sx\":\"VlsjhXAxgjTuWepVwO7ll48DndHpLBOXAkZ2n_eKVIY=\",\"sy\":\"qIS5ovAHbgauhduFKUOTj68ghvcFWLgtI7FV7suB32o=\"}}";
 
 
@@ -44,7 +53,7 @@ public class Daemon {
 
         private String tmp_rl_list_string = "{\"RogueList\":[]}";
 
-        public Daemon(String configFilename) throws NoSuchAlgorithmException {
+        public Daemon(String configFilename) throws NoSuchAlgorithmException, IOException, InterruptedException {
                 // TODO Figure out what to do with config file
 
                 SetupCurve();
@@ -59,20 +68,29 @@ public class Daemon {
         public void Run() {
                 System.out.println("Starting daemon");
 
-                String message = "This is a message";
-
                 try {
-                        byte[] signature = Sign(message);
-
-                        if (!Verify(message, signature)) {
-                                System.out.println("ERROR verifying signature");
-                        } else {
-                                System.out.println("Verified signature");
+                        while (true) {
+                                String in_message = this.pipe.readLine();
+                                System.out.println("Got message: " + in_message);
                         }
-		} catch (NoSuchAlgorithmException e) {
+                } catch (IOException e) {
                         System.out.println("ERROR, exception thrown:");
 			e.printStackTrace();
-		}
+                }
+                // String message = "This is a message";
+
+                // try {
+                //         byte[] signature = Sign(message);
+
+                //         if (!Verify(message, signature)) {
+                //                 System.out.println("ERROR verifying signature");
+                //         } else {
+                //                 System.out.println("Verified signature");
+                //         }
+		// } catch (NoSuchAlgorithmException e) {
+                //         System.out.println("ERROR, exception thrown:");
+		// 	e.printStackTrace();
+		// }
         }
 
         private void SetupCurve() {
@@ -101,7 +119,15 @@ public class Daemon {
                 this.ver = new Verifier(curve);
         }
 
-        private void OpenNamedPipe() {
+        private void OpenNamedPipe() throws IOException, InterruptedException {
+                Files.deleteIfExists(this.tmp_fifoPath);
+
+                Process process = null;
+                String[] command_make = new String[] {"mkfifo", this.tmp_fifoPath.toString()};
+                process = new ProcessBuilder(command_make).inheritIO().start();
+                process.waitFor();
+
+                this.pipe = new RandomAccessFile(this.tmp_fifoPath.toString(), "r");
         }
 
         private byte[] Sign(String message) throws NoSuchAlgorithmException {
