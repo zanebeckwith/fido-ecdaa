@@ -44,6 +44,7 @@ import com.ibm.zurich.Issuer.JoinMessage1;
 import com.ibm.zurich.Issuer.JoinMessage2;
 import com.ibm.zurich.crypto.BNCurve;
 import com.ibm.zurich.crypto.BNCurve.BNCurveInstantiation;
+import com.ibm.zurich.Daemon;
 
 public class Main {	
 	public static String USAGE 		= "java -jar ecdaa-version-jar-with-dependencies";
@@ -56,6 +57,7 @@ public class Main {
 	public static String SIGN 		= "sign";
 	public static String JOIN1 		= "join1";
 	public static String JOIN2 		= "join2";
+	public static String DAEMON 		= "daemon";
 		
 	public static void main(String[] args) throws NoSuchAlgorithmException, IOException {		
 		Option help = new Option(HELP, "print this message");
@@ -93,6 +95,12 @@ public class Main {
 				.argName("ipk><authsk><msg2><appId><krd><sig")
 				.desc("create a signature")
 				.build();
+
+                Option daemon = Option.builder(DAEMON)
+                                .numberOfArgs(1)
+                                .argName("configFile")
+                                .desc("start as a daemon")
+                                .build();
 		
 		options.addOption(help);
 		options.addOption(version);
@@ -102,6 +110,7 @@ public class Main {
 		options.addOption(verify);
 		options.addOption(join1);
 		options.addOption(join2);
+		options.addOption(daemon);
 		
 		HelpFormatter formatter = new HelpFormatter();		
 		CommandLineParser parser = new DefaultParser();
@@ -124,6 +133,15 @@ public class Main {
 				instantiation = BNCurveInstantiation.valueOf(line.getOptionValue(USECURVE));
 				curve = new BNCurve(instantiation);
 			}
+			else if(line.hasOption(DAEMON)) {
+				String[] optionValues = line.getOptionValues(DAEMON);
+
+                                Daemon daemon_oracle = new Daemon(optionValues[0]);
+
+                                daemon_oracle.Run();
+
+                                return;
+                        }
 			else {
 				System.out.println("Specify the curve to use.");
 				return;
