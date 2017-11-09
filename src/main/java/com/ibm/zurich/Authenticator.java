@@ -169,8 +169,8 @@ public class Authenticator {
 				this.curve.point1ToBytes(u),
 				this.curve.point1ToBytes(s),
 				this.curve.point1ToBytes(w),
-				appId.getBytes(),
-				this.curve.hash(krd));
+				appId.getBytes());
+				// this.curve.hash(krd));
 		BigInteger s2 = r2.add(c2.multiply(this.sk).mod(this.curve.getOrder())).mod(this.curve.getOrder());
 		return new EcDaaSignature(r, s, t, w, c2, s2, krd);
 	}

@@ -25,6 +25,10 @@ import iaik.security.ec.math.field.PrimeCharacteristicField;
 import iaik.security.ec.math.field.PrimeFieldElement;
 import iaik.security.ec.math.field.QuadraticExtensionField;
 import iaik.security.ec.math.field.QuadraticExtensionFieldElement;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.FileOutputStream;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -345,8 +349,19 @@ public class BNCurve {
 	 * @return hash(preimageArray) modulo the order of the group
 	 * @throws NoSuchAlgorithmException
 	 */
-	public BigInteger hashModOrder(byte[]... preimageArray) throws NoSuchAlgorithmException {
-		return new BigInteger(this.hash(preimageArray)).mod(this.getOrder());
+	public BigInteger hashModOrder(byte[]... preimageArray) throws NoSuchAlgorithmException, FileNotFoundException, IOException {
+// FileOutputStream fos2 = new FileOutputStream(new File("hash_input.bin"));
+// fos2.write(this.hash(preimageArray));
+// fos2.flush();
+// fos2.close();
+
+FileOutputStream fos = new FileOutputStream(new File("hash_output.bin"));
+// fos.write(this.bigIntegerToB(new BigInteger(this.hash(preimageArray))));
+fos.write(this.bigIntegerToB(this.getOrder()));
+fos.flush();
+fos.close();
+		// return new BigInteger(this.hash(preimageArray)).mod(this.getOrder());
+		return new BigInteger(this.hash(preimageArray));
 	}
 	
 	/**

@@ -28,6 +28,10 @@ import com.google.gson.JsonParser;
 import com.ibm.zurich.Authenticator.EcDaaSignature;
 import com.ibm.zurich.Issuer.IssuerPublicKey;
 import com.ibm.zurich.crypto.BNCurve;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.FileOutputStream;
 
 /**
  * Class containing the Verifier ECDAA functions
@@ -53,31 +57,58 @@ public class Verifier {
 	 * @return true iff the signature is valid
 	 * @throws NoSuchAlgorithmException
 	 */
-	public boolean verify(EcDaaSignature signature, String appId, IssuerPublicKey pk, Set<BigInteger> revocationList) throws NoSuchAlgorithmException {
+	public boolean verify(EcDaaSignature signature, String appId, IssuerPublicKey pk, Set<BigInteger> revocationList) throws NoSuchAlgorithmException, FileNotFoundException, IOException {
 		boolean success = true;
 		
 		// Check that a, b, c, d are in G1
 		success &= this.curve.isInG1(signature.r);
+                if (!success) System.out.println("r");
 		success &= this.curve.isInG1(signature.s);
+                if (!success) System.out.println("s");
 		success &= this.curve.isInG1(signature.t);
+                if (!success) System.out.println("t");
 		success &= this.curve.isInG1(signature.w);
+                if (!success) System.out.println("2");
 
 		// Check that this is not the trivial credential (1, 1, 1, 1)
 		success &= !this.curve.isIdentityG1(signature.r);
-		
-		// Verify that c2, s2 proves SPK{(sk): w = s^sk}(krd, appId)
-		success &= signature.c2.equals(this.curve.hashModOrder(
-				this.curve.point1ToBytes(
+BigInteger my_c = this.curve.hashModOrder(this.curve.point1ToBytes(
 						signature.s.multiplyPoint(signature.s2).subtractPoint(signature.w.multiplyPoint(signature.c2))),
 				this.curve.point1ToBytes(signature.s),
 				this.curve.point1ToBytes(signature.w),
-				appId.getBytes(),
-				this.curve.hash(signature.krd)));
+				appId.getBytes());
+if (my_c.compareTo(curve.getOrder()) == 1) System.out.println("greater");
+if (my_c.signum() < 0) System.out.println("neg");
+System.out.println(curve.bigIntegerToB(signature.c2));
+System.out.println(curve.bigIntegerToB(my_c));
+
+FileOutputStream fos3 = new FileOutputStream(new File("other_hash.bin"));
+fos3.write(curve.bigIntegerToB(signature.c2));
+fos3.flush();
+fos3.close();
+FileOutputStream fos2 = new FileOutputStream(new File("hash_output.bin"));
+fos2.write(curve.bigIntegerToB(my_c));
+fos2.flush();
+fos2.close();
+// FileOutputStream fos = new FileOutputStream(new File("hash_input.bin"));
+// fos.write(this.curve.point1ToBytes(signature.s.multiplyPoint(signature.s2).subtractPoint(signature.w.multiplyPoint(signature.c2))));
+// fos.write(this.curve.point1ToBytes(signature.s));
+// fos.write(this.curve.point1ToBytes(signature.w));
+// fos.write(appId.getBytes());
+// fos.flush();
+// fos.close();
+		
+		// Verify that c2, s2 proves SPK{(sk): w = s^sk}(krd, appId)
+		success &= signature.c2.equals(my_c);
+				// this.curve.hash(signature.krd)));
+                if (!success) System.out.println("schnorr");
 		
 		// Verify credential
 		success &= this.curve.pair(signature.r, pk.Y).equals(this.curve.pair(signature.s, this.curve.getG2()));
+                if (!success) System.out.println("cred1");
 		success &= this.curve.pair(signature.t, this.curve.getG2()).equals(
 				this.curve.pair(signature.r.clone().addPoint(signature.w), pk.X));
+                if (!success) System.out.println("cred2");
 
 		// Perform revocation check
 		if(revocationList != null) {
@@ -85,6 +116,7 @@ public class Verifier {
 				success &= !signature.s.clone().multiplyPoint(sk).equals(signature.w);
 			}
 		}
+                if (!success) System.out.println("rev");
 		
 		return success;
 	}

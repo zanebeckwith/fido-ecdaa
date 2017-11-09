@@ -23,6 +23,10 @@ import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
+import java.io.IOException;
+import java.io.FileNotFoundException;
+import java.io.File;
+import java.io.FileOutputStream;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -368,22 +372,28 @@ public class Issuer {
 			this.s2 = curve.bigIntegerFromB(decoder.decode(object.get(JSON_S2).getAsString()));
 		}
 		
-		public String toJson(BNCurve curve) {
+		public String toJson(BNCurve curve) throws FileNotFoundException, IOException {
+                        FileOutputStream fos = new FileOutputStream(new File("cred.bin"));
+
 			StringBuilder sb = new StringBuilder();
 			Base64.Encoder encoder = Base64.getUrlEncoder();
 			
 			sb.append("{\"" + JSON_NAME + "\":{");
 			
 			sb.append("\"" + JSON_A + "\":\"");
+                        fos.write(curve.point1ToBytes(this.a));
 			sb.append(encoder.encodeToString(curve.point1ToBytes(this.a)));
 			sb.append("\",");
 			sb.append("\"" + JSON_B + "\":\"");
+                        fos.write(curve.point1ToBytes(this.b));
 			sb.append(encoder.encodeToString(curve.point1ToBytes(this.b)));
 			sb.append("\",");
 			sb.append("\"" + JSON_C + "\":\"");
+                        fos.write(curve.point1ToBytes(this.c));
 			sb.append(encoder.encodeToString(curve.point1ToBytes(this.c)));
 			sb.append("\",");
 			sb.append("\"" + JSON_D + "\":\"");
+                        fos.write(curve.point1ToBytes(this.d));
 			sb.append(encoder.encodeToString(curve.point1ToBytes(this.d)));
 			sb.append("\",");
 			
@@ -397,6 +407,9 @@ public class Issuer {
 				
 			sb.append("}}");
 			
+                        fos.flush();
+                        fos.close();
+
 			return sb.toString();
 		}
 	}
